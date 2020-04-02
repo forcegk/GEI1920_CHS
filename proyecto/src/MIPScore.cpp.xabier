@@ -1,5 +1,5 @@
 #include"MIPScore.h"
-
+#define ASM
 void MIPScore::SW(int reg, int dir){
 	addr	->write( dir );
 	rW		->write( WR );
@@ -13,6 +13,8 @@ void MIPScore::LW(int reg, int dir){
 	memRead->read( valor );
 	regs[reg] = valor;
 }
+
+
 
 void MIPScore::codigoFiltrar() {
 
@@ -341,121 +343,197 @@ void MIPScore::codigoL1() {
 	}
 }
 
+#ifdef ASM
 void MIPScore::codigoL0inv() {
-	
-	#define la(r1, inm) lui(r1, inm); ori(r1, 0, inm)
-	
-	#define $i $s0
-	#define $j $s1
-	#define $k $s2
-	#define $n $s3
+	int i, j, k, n, dir1, dir2;
+	// i = $t0 (8) j = $t1 (9) k = $t2 (10) n = $t3 (11)
+	//dir1 = $t4 (12) dir2 = $t5 (13)
+	//temporal = $t9 (25)
 
-	#define $dir1 $s4
-	#define $dir2 $s5
-	
 	ori($s6, $0, 0x3000); // Guardamos en $s6 el valor 0x3000, que usamos a menudo
 
-	ori($t8, $0, 1);
-	SW($t8, Rs6 + 12);  // TODO sumar
 
-	// Establecemos direcciones de entrada y salida
-	ori($a0, $0, 0x1000);
-	ori($a1, $0, 0x2000);
+	ori($t8, 0, 0x1); 									//Rt8 = 1;
+	SW($t8, Rs6 + 0xC);									//SW($t8, 0x3000 + 12);
+	ori($a0, 0, 0x1000);								//Ra0 = 0x1000;
+	ori($a1, 0, 0x2000);								//Ra1 = 0x2000;
 
-	while_true:
-		inicioEspera:
-			LW($t0, Rs6);		// espera al procesador anterior
-			beq($t0, $0, inicioEspera);
-		//inicioEspera
+	inicioEspera:
+		LW($t0, Rs6);								//LW($t0, 0x3000);
+		beq($t0, 0, inicioEspera);						//if (Rt0 == 0)
 
-		esperaPosterior:
-			LW($t0, Rs6 + 8);	// espera al procesador posterior
-			beq($t0, $0, esperaPosterior);
+	esperaPosterior:
+		LW($t0, Rs6 + 0x8);								//LW($t0, 0x3000 + 8);
+		beq($t0, 0, esperaPosterior);					//if (Rt0 == 0)
 
-			// A partir de aqui $t0 queda libre //
-			// lo usaremos para comprobar en los branch //
+	ori ($t0, 0, 0x0);								//for (i = 0; i < 256; i += 2) {		
+	exterior_loop:
 
-			xor($i, $i, $i); // i = 0
-			for_i:
-				ori($j, $i, $0); //j = i
-				xor($k, $k, $k); //k = 0;
+		or ($t1, 0, $t0);								//j = i;
+		xor ($t2, $t2, $t2);							//k = 0;
 
-				xor($n, $n, $n); //n = 0;
-				for_n_1:
-					sll($k, $k, 1); //k <<= 1
-					andi($t0, $j, 1);
-					or ($k, $k, $t0); // k |= j & 1;
-					srl($j, $j, 1); // j >>= 1;
+		ori ($t3, 0, 0x0);							//for (n = 0; n < 8; ++n) {
+		internal_loop_1:
 
-					addi($n, $n, 1); // n++
-					addi($t0, $n, -8);
-					bne($t0, $0, for_n_1);
-				//for_n_1
+			sll($t2, $t2, 0x1);							//k <<= 1;
 
-				sll($dir1, $k, 1);
-				addi($j, $i, 1);
-				xor ($k, $k, $k); //k = 0;
+			andi($t9, $t1, 0x1);						//k |= j & 1;
+			or ($t2, $t2, $t9);
 
-				xor ($n, $n, $n); //n = 0;
-				for_n_2:
-					sll($k, $k, 1); //k <<= 1
-					andi($t0, $j, 1);
-					or ($k, $k, $t0); // k |= j & 1;
-					srl($j, $j, 1); // j >>= 1;
+			srl($t1, $t1, 0x1);							//j >>= 1;
+			
+			addi($t3, $t3, 1);
+			or ($t9, 0, $t3);
+			addi($t9, $t9, -8);
+			bne($t9, 0, internal_loop_1);				//internal_loop_1 FOR END ZONE
 
-					addi($n, $n, 1); // n++
-					addi($t0, $n, -8);
-					bne($t0, $0, for_n_2);
-				//for_n_2
+		sll($t4, $t2, 0x1);								//dir1 = k << 1;
 
-				sll($dir2, $k, 1);
+		or ($t1, 0, $t0);								//j = i + 1;
+		addi($t1, $t1, 0x1);
 
-				// Desplazamos dos a la izq. dir1 y dir2 para su uso en las LW's
-				sll($dir1, $dir1, 2);
-				sll($dir2, $dir2, 2);
+		xor ($t2, $t2, $t2);							//k = 0;
 
-				// Calculamos la suma de $a0 y $dir1 y la ponemos en $t0
-				add($t0, $a0, $dir1);
-				// Y ejecutamos los accesos   ==> Ra0 + (dir1 << 2) == $t0
-				LW($t1, Rt0 + 0);	// real
-				LW($t2, Rt0 + 4);	// img
+		ori($t3, 0, 0x0);							//for (n = 0; n < 8; ++n) {
+		internal_loop_2:
+		
+			sll($t2, $t2, 0x1);							//k <<= 1;
+				
+			andi($t9, $t1, 0x1);						//k |= j & 1;
+			or ($t2, $t2, $t9);
 
-				// Hacemos lo mismo con $dir2 ==> Ra0 + (dir2 << 2) == $t0
-				add($t0, $a0, $dir2);
-				LW($t3, Rt0);		// real
-				LW($t4, Rt0 + 4);	// img
+			srl($t1, $t1, 0x1);							//j >>= 1;
 
-				add($t5, $t1, $t3);
-				sub($t6, $t1, $t3);
-				add($t7, $t2, $t4);
-				sub($t8, $t2, $t4);
+			addi($t3, $t3, 1);
+			or ($t9, 0, $t3);
+			addi($t9, $t9, -8);
+			bne($t9, 0, internal_loop_2);				//internal_loop_1 FOR END ZONE
 
-				//Guardamos i<<3 en $t0
-				sll($t0, $i, 3);
-				//Y le sumamos Ra1   ==> Ra1 + (i << 3) == $t0
-				add($t0, $t0, $a1);
+		sll($t5, $t2, 0x1);								//dir2 = k << 1;
 
-				SW($t5, Rt0);
-				SW($t7, Rt0 + 4);	// img 
-				SW($t6, Rt0 + 8);
-				SW($t8, Rt0 + 12);	// img
+		sll($t9, $t4, 0x2);								//LW($t1, Ra0 + (dir1 << 2));
+		add($t9, $a0, $t9);
+		LW($t1, Rt9);
 
-				addi($i, $i, 2); // i+=2
-				addi($t0, $i, -256);
-				bne($t0, $0, for_i);
-			//for_i
+		sll($t9, $t4, 0x2);								//LW($t2, Ra0 + (dir1 << 2) + 4);
+		add($t9, $a0, $t9);
+		addi($t9, $t9, 0x4);
+		LW($t2, Rt9);
 
-			SW($t8, Rs6 + 4);		// TODO CAMBIAR avisa al consumidor de que termin�
-			SW($t8, Rs6 + 12);		// TODO CAMBIAR avisa al productor de que est� listo		
+		sll($t9, $t5, 0x2);								//LW($t3, Ra0 + (dir2 << 2));
+		add($t9, $a0, $t9);
+		LW($t3, Rt9);
 
-			ori($t0, $t0, 0x800);
-			xor ($a0, $a0, $t0);		// truco para leer datos del otro bloque	( doble buffer o buffer ping-pong)
-			xor ($a1, $a1, $t0);		// truco para escribri resultados el otro bloque
-		//esperaPosterior
+		sll($t9, $t5, 0x2);								//LW($t4, Ra0 + (dir2 << 2) + 4);
+		add($t9, $a0, $t9);
+		addi($t9, $t9, 0x4);
+		LW($t4, Rt9);
 
-		j(while_true);
-	//while_true
+		add($t5, $t1, $t3);								//Rt5 = Rt1 + Rt3;
+		sub($t6, $t1, $t3);								//Rt6 = Rt1 - Rt3;
+		add($t7, $t2, $t4);								//Rt7 = Rt2 + Rt4;
+		sub($t8, $t2, $t4);								//Rt8 = $t2 - Rt4;
+
+
+		sll($t9, $t0, 0x3);								//SW($t5, Ra1 + (i << 3));
+		add($t9, $t9, $a1);
+		SW($t5, Rt9);
+
+		sll($t9, $t0, 0x3);								//SW($t7, Ra1 + (i << 3) + 4);
+		add($t9, $t9, $a1);
+		addi($t9, $t9, 0x4);
+		SW($t7, Rt9);
+
+		sll($t9, $t0, 0x3);								//SW($t6, Ra1 + (i << 3) + 8);
+		add($t9, $t9, $a1);
+		addi($t9, $t9, 0x8);
+		SW($t6, Rt9);
+
+		sll($t9, $t0, 0x3);								//SW($t8, Ra1 + (i << 3) + 12);
+		add($t9, $t9, $a1);
+		addi($t9, $t9, 0xC);
+		SW($t8, Rt9);
+
+		addi($t0, $t0, 0x2);
+		or ($t9, 0, $t0);
+		addi($t9, $t9, -256);
+		bne($t9, 0, exterior_loop);				//internal_loop_1 FOR END ZONE
+
+	SW($t8, Rs6 + 0x4);									//SW($t8, 0x3000 + 4);
+	SW($t8, Rs6 + 0xC);									//SW($t8, 0x3000 + 12);
+
+	ori($t9, 0, 0x800);
+	xor ($a0, $a0, $t9);								//Ra0 ^= 0x800;
+	xor ($a1, $a1, $t9);								//Ra1 ^= 0x800;
+
+	j(inicioEspera);									//WHILE END ZONE
 }
+
+#else
+
+void MIPScore::codigoL0inv() {
+
+	int i, j, k, n, dir1, dir2;
+	int calc1, calc2;
+
+	Rt8 = 1;				// elijo un registro cualquiera para pasar un valor no nulo
+	SW($t8, 0x3000 + 12);	// avisa al procesador anterior de que est� listo
+
+	Ra0 = 0x1000; // direcci�n datos de entrada
+	Ra1 = 0x2000; // direcci�n resultados
+
+	while (true) {
+
+	inicioEspera:
+		LW($t0, 0x3000);		// espera al procesador anterior
+		if (Rt0 == 0)			// beq $t0, $0, inicioEspera
+			goto inicioEspera;
+
+	esperaPosterior:
+		LW($t0, 0x3000 + 8);	// espera al procesador posterior
+		if (Rt0 == 0)			// beq $t0, $0, esperaPosterior
+			goto esperaPosterior;
+
+		for (i = 0; i < 256; i += 2) {
+
+			// para obtener la direcci�n de los datos ha que "invertir" los bits de su direcci�n.
+			j = i; k = 0;
+			for (n = 0; n < 8; ++n) { k <<= 1;		k |= j & 1;		j >>= 1; }		dir1 = k << 1;	// direcci�n 1er dato (real)
+
+			// se respite para la segunda direcci�n
+			j = i + 1; k = 0;
+			for (n = 0; n < 8; ++n) { k <<= 1;		k |= j & 1;		j >>= 1; }		dir2 = k << 1;	// direcci�n 2do dato (real)
+			cout << "i=" << i << " Dir1=" << dir1 << " Dir2=" << dir2 << endl;
+
+			// Leemos 2 parejas de datos (real e img) en 4 registros elegidos al azar
+			// el �nico motivo por el que se van a utilizar registros (Rt0, Rt1,...) es para poder utilizar las funciones LW y SW
+			// definidas en esta misma clase. De no ser por ello, se utilizar�an variables normales
+
+			LW($t1, Ra0 + (dir1 << 2));		// real
+			LW($t2, Ra0 + (dir1 << 2) + 4);	// img
+			LW($t3, Ra0 + (dir2 << 2));		// real
+			LW($t4, Ra0 + (dir2 << 2) + 4);	// img
+
+			Rt5 = Rt1 + Rt3;
+			Rt6 = Rt1 - Rt3;
+			Rt7 = Rt2 + Rt4;
+			Rt8 = Rt2 - Rt4;
+
+			SW($t5, Ra1 + (i << 3));
+			SW($t7, Ra1 + (i << 3) + 4);		// img 
+			SW($t6, Ra1 + (i << 3) + 8);
+			SW($t8, Ra1 + (i << 3) + 12);		// img
+		}
+
+		SW($t8, 0x3000 + 4);		// avisa al consumidor de que termin�
+		SW($t8, 0x3000 + 12);		// avisa al productor de que est� listo
+
+		Ra0 ^= 0x800;				// truco para leer datos del otro bloque	( doble buffer o buffer ping-pong)
+		Ra1 ^= 0x800;				// truco para escribri resultados el otro bloque
+	}
+
+}
+#endif
 
 void MIPScore::codigoL1inv() {
 
@@ -630,3 +708,4 @@ void MIPScore::procesar(){
 void MIPScore::setDebug(bool onOff){
 	debug = onOff;
 }
+
