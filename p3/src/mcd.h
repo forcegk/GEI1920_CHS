@@ -29,7 +29,7 @@ public:
 private:
 	sc_signal<sc_int<16>> A, B;
 	sc_uint<3> estado; 
-	sc_int<16> resta;
+	sc_int<16> resta, tmp_swap_var;
 	bool signo, cero;
 	enum st { ini, restar, aMayor, aMenor, fin };
 }; 
