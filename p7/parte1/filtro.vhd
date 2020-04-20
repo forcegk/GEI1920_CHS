@@ -7,8 +7,8 @@ entity filtro is
 	Port (
 		clk, reset : in std_logic;
 		intro : in signed(7 downto 0);
-		outro : out signed(7 downto 0);
-		res : out signed(15 downto 0)
+		outro : out signed(7 downto 0)
+		--res : out signed(15 downto 0)
 	);
 end entity filtro;
 

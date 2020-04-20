@@ -6,6 +6,6 @@
 - [x] Práctica 4 // Por subir
 - [x] Práctica 5 // Por subir
 - [x] Práctica 6
-- [ ] Práctica 7
+- [x] Práctica 7
 
 - [x] Proyecto Dataflow

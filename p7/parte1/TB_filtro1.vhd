@@ -10,14 +10,15 @@ architecture test of tb_filtro1 is
 	component filtro port (
 		clk, reset : in std_logic;
 		intro : in signed(7 downto 0);
-		outro : out signed(7 downto 0);
-		res : out signed(15 downto 0));
+		outro : out signed(7 downto 0)
+		--res : out signed(15 downto 0)
+    );
 	end component;
 	
 signal clk : STD_LOGIC := '0';
 signal rst : STD_LOGIC;
 signal intro, outro : signed(7 downto 0);
-signal res : signed(15 downto 0);
+--signal res : signed(15 downto 0);
 constant NUM_CICLOS : integer := 20;
 	
 begin
@@ -26,8 +27,8 @@ begin
 		clk => clk,
 		reset => rst,
 		intro => intro,
-		outro => outro,
-		res => res
+		outro => outro
+		--res => res
 	);
 
 	
@@ -74,5 +75,3 @@ begin
 	
 	
 end test;
-	
-	

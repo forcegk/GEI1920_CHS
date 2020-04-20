@@ -20,7 +20,7 @@ if ! [ -x "$(command -v gtkwave)" ]; then
 fi
 
 ghdl -a practica1.vhd
-ghdl -a tb_practica1.vhd
+ghdl -a TB_practica1.vhd
 
 ghdl -e practica1
 ghdl -e tb_practica1
