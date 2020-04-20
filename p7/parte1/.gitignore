@@ -1,0 +1,6 @@
+*.o
+*.cf
+
+filtro
+tb_filtro1
+tb_filtro1_wave.vcd
