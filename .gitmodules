@@ -1,0 +1,4 @@
+[submodule "GEI1920_CHS_Proyecto"]
+	path = GEI1920_CHS_Proyecto
+	url = git@github.com:forcegk/GEI1920_CHS_Proyecto.git
+	branch = master
